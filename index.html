@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>寶貝行事曆</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<style>
+  :root {
+    --color-bg: #ffffff;
+    --color-bg-secondary: #f5f4f0;
+    --color-bg-tertiary: #eeecea;
+    --color-text: #1a1a1a;
+    --color-text-secondary: #555550;
+    --color-text-tertiary: #999992;
+    --color-border: rgba(0,0,0,0.12);
+    --color-border-hover: rgba(0,0,0,0.25);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --accent: #7F77DD;
+    --accent-light: #EEEDFE;
+    --accent-dark: #534AB7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #1c1c1e;
+      --color-bg-secondary: #2c2c2e;
+      --color-bg-tertiary: #3a3a3c;
+      --color-text: #f0f0ee;
+      --color-text-secondary: #aeaead;
+      --color-text-tertiary: #6e6e6a;
+      --color-border: rgba(255,255,255,0.12);
+      --color-border-hover: rgba(255,255,255,0.28);
+      --accent-light: #2e2a5a;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text);
+    min-height: 100vh;
+  }
+  #app {
+    max-width: 680px;
+    margin: 0 auto;
+    background: var(--color-bg);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+    box-shadow: 0 0 40px rgba(0,0,0,0.08);
+  }
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 1.25rem 0.85rem;
+    border-bottom: 0.5px solid var(--color-border);
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .cal-title {
+    font-size: 18px; font-weight: 600; color: var(--color-text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cal-nav { display: flex; align-items: center; gap: 8px; }
+  .cal-nav button {
+    background: none; border: 0.5px solid var(--color-border-hover);
+    border-radius: var(--radius-md); padding: 4px 12px; cursor: pointer;
+    font-size: 15px; color: var(--color-text); transition: background 0.15s;
+  }
+  .cal-nav button:hover { background: var(--color-bg-secondary); }
+  .month-label { font-size: 15px; font-weight: 500; min-width: 105px; text-align: center; }
+  .mode-badge {
+    font-size: 12px; padding: 4px 12px; border-radius: 99px;
+    border: 0.5px solid var(--color-border-hover);
+    cursor: pointer; color: var(--color-text-secondary);
+    display: flex; align-items: center; gap: 5px;
+    user-select: none; transition: background 0.15s;
+  }
+  .mode-badge:hover { background: var(--color-bg-secondary); }
+  .mode-badge.edit { background: var(--accent-light); color: var(--accent-dark); border-color: #AFA9EC; }
+  .weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 2px; padding: 0 0.75rem; margin-bottom: 3px;
+  }
+  .weekday-label {
+    text-align: center; font-size: 11px; font-weight: 600;
+    color: var(--color-text-tertiary); padding: 2px 0; letter-spacing: 0.03em;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; padding: 0 0.75rem;
+  }
+  .cal-day {
+    border-radius: var(--radius-md); min-height: 78px; padding: 4px 5px;
+    border: 0.5px solid var(--color-border);
+    background: var(--color-bg); position: relative; overflow: hidden;
+    transition: background 0.12s;
+  }
+  .cal-day.empty { background: transparent; border-color: transparent; }
+  .cal-day.today { border-color: var(--accent); border-width: 1.5px; }
+  .cal-day.other-month { opacity: 0.4; }
+  .cal-day.is-holiday { background: #FEF0F3; }
+  @media (prefers-color-scheme: dark) { .cal-day.is-holiday { background: #3a2029; } }
+  .cal-day.is-holiday .day-num { color: #C45070; }
+  .cal-day.today.is-holiday .day-num { background: var(--accent); color: #fff; }
+  .holiday-name { font-size: 9px; color: #C45070; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; letter-spacing: 0.01em; }
+  .cal-day.editable { cursor: pointer; }
+  .cal-day.editable:hover { background: var(--color-bg-secondary); }
+  .cal-day.view-clickable { cursor: pointer; }
+  .cal-day.view-clickable:hover { background: var(--color-bg-secondary); }
+  .day-num {
+    font-size: 12px; font-weight: 500; color: var(--color-text-secondary);
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; margin-bottom: 2px;
+  }
+  .cal-day.today .day-num { background: var(--accent); color: #fff; font-weight: 600; }
+  .event-pill {
+    font-size: 10px; padding: 1px 5px; border-radius: 99px;
+    margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%; display: block; font-weight: 600; cursor: pointer;
+    transition: opacity 0.1s;
+  }
+  .event-pill:hover { opacity: 0.8; }
+  .more-events { font-size: 10px; color: var(--color-text-tertiary); margin-top: 1px; }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.38);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  .modal {
+    background: var(--color-bg); border-radius: var(--radius-xl);
+    border: 0.5px solid var(--color-border-hover);
+    padding: 1.4rem 1.5rem 1.2rem;
+    width: 330px; max-width: calc(100vw - 32px);
+    position: relative; animation: slideUp 0.18s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 1rem; color: var(--color-text); }
+  .modal label { font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 4px; }
+  .modal input[type="text"],
+  .modal input[type="password"],
+  .modal textarea {
+    width: 100%; margin-bottom: 0.8rem; font-size: 14px;
+    border: 0.5px solid var(--color-border-hover);
+    border-radius: var(--radius-md); padding: 8px 11px;
+    background: var(--color-bg); color: var(--color-text);
+    font-family: inherit; outline: none;
+    transition: border-color 0.15s;
+  }
+  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+  .modal textarea { resize: vertical; min-height: 64px; }
+  .color-row { display: flex; gap: 7px; margin-bottom: 0.9rem; flex-wrap: wrap; }
+  .color-dot {
+    width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+    border: 2.5px solid transparent; transition: transform 0.12s, border-color 0.12s;
+  }
+  .color-dot.selected { border-color: var(--color-text); transform: scale(1.18); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 0.2rem; }
+  .modal-actions button {
+    padding: 7px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 0.5px solid var(--color-border-hover);
+    background: var(--color-bg); color: var(--color-text);
+    font-family: inherit; transition: opacity 0.12s, background 0.12s;
+  }
+  .modal-actions button:hover { background: var(--color-bg-secondary); }
+  .modal-actions button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .modal-actions button.primary:hover { opacity: 0.87; }
+  .modal-actions button.danger { color: #E24B4A; border-color: #E24B4A; background: transparent; }
+  .close-btn {
+    position: absolute; top: 11px; right: 14px; background: none; border: none;
+    font-size: 20px; cursor: pointer; color: var(--color-text-tertiary); line-height: 1; padding: 2px;
+  }
+  .close-btn:hover { color: var(--color-text); }
+  .pw-hint { font-size: 12px; color: var(--color-text-tertiary); margin: -0.5rem 0 0.8rem; }
+  .view-event-list { list-style: none; margin-top: 0.5rem; }
+  .view-event-list li {
+    padding: 7px 0; border-bottom: 0.5px solid var(--color-border);
+    font-size: 13px; display: flex; align-items: flex-start; gap: 9px;
+  }
+  .view-event-list li:last-child { border-bottom: none; }
+  .view-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .view-event-title { font-weight: 600; color: var(--color-text); }
+  .view-event-note { color: var(--color-text-secondary); font-size: 12px; margin-top: 2px; }
+  .empty-day-msg { color: var(--color-text-tertiary); font-size: 13px; margin-top: 0.6rem; text-align: center; padding: 1rem 0; }
+  .footer-note {
+    text-align: center; font-size: 11px; color: var(--color-text-tertiary);
+    margin-top: 1.5rem; letter-spacing: 0.02em;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="cal-header">
+    <div class="cal-title">
+      <i class="ti ti-star" style="color:#D4537E;font-size:20px" aria-hidden="true"></i>
+      寶貝行事曆
+    </div>
+    <div class="cal-nav">
+      <button id="prevBtn" aria-label="上個月">‹</button>
+      <span class="month-label" id="monthLabel"></span>
+      <button id="nextBtn" aria-label="下個月">›</button>
+    </div>
+    <div class="mode-badge" id="modeToggle" role="button" tabindex="0" aria-label="切換模式">
+      <i class="ti ti-lock" style="font-size:13px" aria-hidden="true"></i>
+      <span id="modeText">查看模式</span>
+    </div>
+  </div>
+  <div class="weekdays" id="weekdays" aria-hidden="true"></div>
+  <div class="cal-grid" id="calGrid" role="grid" aria-label="月曆"></div>
+  <p class="footer-note">家庭共享行事曆 ✦ 查看模式對所有人開放</p>
+</div>
+
+<!-- 密碼 Modal -->
+<div class="modal-backdrop" id="pwModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <div class="modal">
+    <button class="close-btn" id="closePwModal" aria-label="關閉">×</button>
+    <h3 id="pwTitle"><i class="ti ti-lock" style="font-size:15px;margin-right:6px" aria-hidden="true"></i>輸入編輯密碼</h3>
+    <label for="pwInput">密碼</label>
+    <input type="password" id="pwInput" placeholder="輸入密碼" autocomplete="off" />
+    <p class="pw-hint">※ 密碼可在 HTML 檔案中修改 EDIT_PASSWORD 的值</p>
+    <div class="modal-actions">
+      <button id="cancelPw">取消</button>
+      <button class="primary" id="confirmPw">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/編輯事件 Modal -->
+<div class="modal-backdrop" id="eventModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+  <div class="modal">
+    <button class="close-btn" id="closeEventModal" aria-label="關閉">×</button>
+    <h3 id="eventModalTitle">新增事件</h3>
+    <label for="evtTitle">標題</label>
+    <input type="text" id="evtTitle" placeholder="例：游泳課、看醫生..." maxlength="20" />
+    <label for="evtNote">備註（選填）</label>
+    <textarea id="evtNote" placeholder="可填時間、地點等..."></textarea>
+    <label>顏色</label>
+    <div class="color-row" id="colorRow" role="group" aria-label="選擇顏色"></div>
+    <div class="modal-actions">
+      <button class="danger" id="deleteEvtBtn" style="display:none"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button>
+      <button id="cancelEvt">取消</button>
+      <button class="primary" id="saveEvt"><i class="ti ti-check" aria-hidden="true"></i> 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 查看日期 Modal -->
+<div class="modal-backdrop" id="viewModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="viewModalDate">
+  <div class="modal">
+    <button class="close-btn" id="closeViewModal" aria-label="關閉">×</button>
+    <h3 id="viewModalDate"></h3>
+    <ul class="view-event-list" id="viewEventList" aria-label="當日事件"></ul>
+    <p class="empty-day-msg" id="emptyDayMsg" style="display:none">這天還沒有行程 ✨</p>
+  </div>
+</div>
+
+<script>
+  // ╔══════════════════════════════════════╗
+  // ║  🔑 在這裡修改你的編輯密碼           ║
+  // ╚══════════════════════════════════════╝
+  const EDIT_PASSWORD = "1234";
+
+  const COLORS = ["#F4C0D1","#FAC775","#C0DD97","#B5D4F4","#CECBF6","#9FE1CB","#F0997B","#D3D1C7"];
+  const COLOR_TEXT = ["#993556","#854F0B","#3B6D11","#185FA5","#3C3489","#0F6E56","#993C1D","#444441"];
+  const DAYS_CN = ["日","一","二","三","四","五","六"];
+  const MONTH_CN = ["一","二","三","四","五","六","七","八","九","十","十一","十二"];
+  const STORAGE_KEY = "kids_cal_events_v3";
+
+  let isEdit = false;
+  let curYear, curMonth;
+  let events = {};
+  let editingKey = null, editingIdx = null;
+  let selectedColor = COLORS[0];
+
+  function loadEvents() {
+    try { events = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { events = {}; }
+  }
+  function saveEvents() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(events)); } catch {}
+  }
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  // ── 台灣國定假日（含補假，每年更新）────────────────────
+  // 格式："YYYY-MM-DD": "假日名稱"
+  // 補班日（需上班）用 null 表示不標色
+  const TW_HOLIDAYS = {
+    // 2025
+    "2025-01-01": "元旦",
+    "2025-01-27": "除夕",
+    "2025-01-28": "春節",
+    "2025-01-29": "春節",
+    "2025-01-30": "春節",
+    "2025-01-31": "春節",
+    "2025-02-28": "和平紀念日",
+    "2025-04-03": "兒童節補假",
+    "2025-04-04": "清明節/兒童節",
+    "2025-05-01": "勞動節",
+    "2025-06-20": "端午節補假",
+    "2025-10-06": "國慶日補假",
+    "2025-10-09": "重陽節",
+    "2025-10-10": "國慶日",
+    "2025-12-25": "聖誕節（行政機關休息）",
+    // 2026
+    "2026-01-01": "元旦",
+    "2026-02-16": "除夕",
+    "2026-02-17": "春節",
+    "2026-02-18": "春節",
+    "2026-02-19": "春節",
+    "2026-02-20": "春節",
+    "2026-02-27": "和平紀念日補假",
+    "2026-03-02": "和平紀念日調移",
+    "2026-04-03": "兒童節",
+    "2026-04-06": "清明節",
+    "2026-05-01": "勞動節",
+    "2026-06-19": "端午節",
+    "2026-09-25": "中秋節",
+    "2026-10-09": "國慶日補假",
+    "2026-10-10": "國慶日",
+    // 2027
+    "2027-01-01": "元旦",
+    "2027-02-05": "除夕",
+    "2027-02-06": "春節",
+    "2027-02-07": "春節",
+    "2027-02-08": "春節",
+    "2027-02-09": "春節",
+    "2027-02-28": "和平紀念日",
+    "2027-04-04": "兒童節/清明節",
+    "2027-05-01": "勞動節",
+    "2027-06-09": "端午節",
+    "2027-10-10": "國慶日",
+  };
+  // 補班日（這天是平日不標粉紅）
+  const TW_WORKDAYS = new Set([
+    "2025-01-18","2025-02-08",
+    "2026-02-14","2026-03-07",
+  ]);
+
+  function isHolidayDay(y, m, d) {
+    const key = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    if (TW_WORKDAYS.has(key)) return null;
+    if (TW_HOLIDAYS[key]) return TW_HOLIDAYS[key];
+    const dow = new Date(y, m, d).getDay();
+    if (dow === 0) return "日";
+    if (dow === 6) return "六";
+    return null;
+  }
+
+  function renderWeekdays() {
+    document.getElementById("weekdays").innerHTML = DAYS_CN.map((d, i) =>
+      `<div class="weekday-label" style="${i===0||i===6?'color:#C45070;':''}">${d}</div>`).join("");
+  }
+
+  function renderCalendar() {
+    const now = new Date();
+    const firstDay = new Date(curYear, curMonth, 1).getDay();
+    const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+    const prevDays = new Date(curYear, curMonth, 0).getDate();
+    document.getElementById("monthLabel").textContent = `${curYear} 年 ${MONTH_CN[curMonth]} 月`;
+    const grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+    let cells = [];
+    for (let i = firstDay - 1; i >= 0; i--) cells.push({ d: prevDays - i, type: "prev" });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ d, type: "cur" });
+    while (cells.length % 7 !== 0) cells.push({ d: cells.length - firstDay - daysInMonth + 1, type: "next" });
+
+    cells.forEach(cell => {
+      let y = curYear, m = curMonth;
+      if (cell.type === "prev") { m--; if (m < 0) { m = 11; y--; } }
+      if (cell.type === "next") { m++; if (m > 11) { m = 0; y++; } }
+      const key = dateKey(y, m, cell.d);
+      const dayEvts = events[key] || [];
+      const isToday = y === now.getFullYear() && m === now.getMonth() && cell.d === now.getDate();
+
+      const div = document.createElement("div");
+      div.className = "cal-day";
+      if (cell.type !== "cur") div.classList.add("other-month");
+      if (isToday) div.classList.add("today");
+
+      // 假日 / 週末標色
+      const holidayName = isHolidayDay(y, m, cell.d);
+      if (holidayName) div.classList.add("is-holiday");
+
+      if (isEdit && cell.type === "cur") div.classList.add("editable");
+      if (!isEdit && cell.type === "cur") div.classList.add("view-clickable");
+
+      const numEl = document.createElement("div");
+      numEl.className = "day-num";
+      numEl.textContent = cell.d;
+      div.appendChild(numEl);
+
+      // 假日名稱小標（非六日才顯示）
+      if (holidayName && holidayName !== "六" && holidayName !== "日") {
+        const hn = document.createElement("div");
+        hn.className = "holiday-name";
+        hn.textContent = holidayName;
+        div.appendChild(hn);
+      }
+
+      const MAX_SHOW = 2;
+      dayEvts.slice(0, MAX_SHOW).forEach((evt, idx) => {
+        const pill = document.createElement("span");
+        pill.className = "event-pill";
+        const ci = COLORS.indexOf(evt.color);
+        pill.style.background = evt.color || COLORS[0];
+        pill.style.color = ci >= 0 ? COLOR_TEXT[ci] : "#333";
+        pill.textContent = evt.title;
+        pill.onclick = e => {
+          e.stopPropagation();
+          if (isEdit && cell.type === "cur") openEditModal(key, idx);
+          else openViewModal(y, m, cell.d);
+        };
+        div.appendChild(pill);
+      });
+      if (dayEvts.length > MAX_SHOW) {
+        const more = document.createElement("div");
+        more.className = "more-events";
+        more.textContent = `+${dayEvts.length - MAX_SHOW} 更多`;
+        div.appendChild(more);
+      }
+
+      div.onclick = () => {
+        if (cell.type !== "cur") return;
+        if (isEdit) openAddModal(key);
+        else openViewModal(y, m, cell.d);
+      };
+      grid.appendChild(div);
+    });
+  }
+
+  function openViewModal(y, m, d) {
+    const key = dateKey(y, m, d);
+    const dayEvts = events[key] || [];
+    document.getElementById("viewModalDate").textContent = `${MONTH_CN[m]} 月 ${d} 日`;
+    const list = document.getElementById("viewEventList");
+    list.innerHTML = "";
+    const emptyMsg = document.getElementById("emptyDayMsg");
+    if (dayEvts.length === 0) {
+      emptyMsg.style.display = "block";
+    } else {
+      emptyMsg.style.display = "none";
+      dayEvts.forEach(evt => {
+        const li = document.createElement("li");
+        const dot = document.createElement("span");
+        dot.className = "view-dot";
+        dot.style.background = evt.color || COLORS[0];
+        const info = document.createElement("div");
+        const title = document.createElement("div");
+        title.className = "view-event-title";
+        title.textContent = evt.title;
+        info.appendChild(title);
+        if (evt.note) {
+          const note = document.createElement("div");
+          note.className = "view-event-note";
+          note.textContent = evt.note;
+          info.appendChild(note);
+        }
+        li.appendChild(dot); li.appendChild(info);
+        list.appendChild(li);
+      });
+    }
+    document.getElementById("viewModal").style.display = "flex";
+  }
+
+  function openAddModal(key) {
+    editingKey = key; editingIdx = null;
+    const [, m, d] = key.split("-").map(Number);
+    document.getElementById("eventModalTitle").textContent = `新增：${MONTH_CN[m - 1]} 月 ${d} 日`;
+    document.getElementById("evtTitle").value = "";
+    document.getElementById("evtNote").value = "";
+    selectedColor = COLORS[0];
+    renderColorPicker();
+    document.getElementById("deleteEvtBtn").style.display = "none";
+    document.getElementById("eventModal").style.display = "flex";
+    setTimeout(() => document.getElementById("evtTitle").focus(), 80);
+  }
+
+  function openEditModal(key, idx) {
+    editingKey = key; editingIdx = idx;
+    const evt = (events[key] || [])[idx];
+    if (!evt) return;
+    const [, m, d] = key.split("-").map(Number);
+    document.getElementById("eventModalTitle").textContent = `編輯：${MONTH_CN[m - 1]} 月 ${d} 日`;
+    document.getElementById("evtTitle").value = evt.title;
+    document.getElementById("evtNote").value = evt.note || "";
+    selectedColor = evt.color || COLORS[0];
+    renderColorPicker();
+    document.getElementById("deleteEvtBtn").style.display = "inline-block";
+    document.getElementById("eventModal").style.display = "flex";
+  }
+
+  function renderColorPicker() {
+    const row = document.getElementById("colorRow");
+    row.innerHTML = "";
+    COLORS.forEach(c => {
+      const dot = document.createElement("div");
+      dot.className = "color-dot" + (c === selectedColor ? " selected" : "");
+      dot.style.background = c;
+      dot.setAttribute("role", "radio");
+      dot.setAttribute("aria-checked", c === selectedColor ? "true" : "false");
+      dot.setAttribute("aria-label", c);
+      dot.setAttribute("tabindex", "0");
+      dot.onclick = () => { selectedColor = c; renderColorPicker(); };
+      dot.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { selectedColor = c; renderColorPicker(); } };
+      row.appendChild(dot);
+    });
+  }
+
+  function saveEvent() {
+    const title = document.getElementById("evtTitle").value.trim();
+    if (!title) { document.getElementById("evtTitle").focus(); return; }
+    const note = document.getElementById("evtNote").value.trim();
+    if (!events[editingKey]) events[editingKey] = [];
+    if (editingIdx === null) {
+      events[editingKey].push({ title, note, color: selectedColor });
+    } else {
+      events[editingKey][editingIdx] = { title, note, color: selectedColor };
+    }
+    saveEvents();
+    document.getElementById("eventModal").style.display = "none";
+    renderCalendar();
+  }
+
+  function deleteEvent() {
+    if (editingKey && editingIdx !== null) {
+      (events[editingKey] || []).splice(editingIdx, 1);
+      if (events[editingKey].length === 0) delete events[editingKey];
+      saveEvents();
+      document.getElementById("eventModal").style.display = "none";
+      renderCalendar();
+    }
+  }
+
+  function setEditMode(val) {
+    isEdit = val;
+    const badge = document.getElementById("modeToggle");
+    const icon = badge.querySelector("i");
+    if (isEdit) {
+      badge.classList.add("edit");
+      document.getElementById("modeText").textContent = "編輯模式";
+      icon.className = "ti ti-edit";
+    } else {
+      badge.classList.remove("edit");
+      document.getElementById("modeText").textContent = "查看模式";
+      icon.className = "ti ti-lock";
+    }
+    renderCalendar();
+  }
+
+  // 事件綁定
+  document.getElementById("modeToggle").onclick = () => {
+    if (isEdit) { setEditMode(false); }
+    else {
+      document.getElementById("pwInput").value = "";
+      document.getElementById("pwInput").placeholder = "輸入密碼";
+      document.getElementById("pwModal").style.display = "flex";
+      setTimeout(() => document.getElementById("pwInput").focus(), 80);
+    }
+  };
+  document.getElementById("modeToggle").onkeydown = e => { if (e.key === "Enter") document.getElementById("modeToggle").click(); };
+  document.getElementById("closePwModal").onclick = () => document.getElementById("pwModal").style.display = "none";
+  document.getElementById("cancelPw").onclick = () => document.getElementById("pwModal").style.display = "none";
+  document.getElementById("confirmPw").onclick = () => {
+    if (document.getElementById("pwInput").value === EDIT_PASSWORD) {
+      setEditMode(true);
+      document.getElementById("pwModal").style.display = "none";
+    } else {
+      document.getElementById("pwInput").value = "";
+      document.getElementById("pwInput").placeholder = "❌ 密碼錯誤，請重試";
+      document.getElementById("pwInput").focus();
+    }
+  };
+  document.getElementById("pwInput").onkeydown = e => { if (e.key === "Enter") document.getElementById("confirmPw").click(); };
+
+  document.getElementById("closeEventModal").onclick = () => document.getElementById("eventModal").style.display = "none";
+  document.getElementById("cancelEvt").onclick = () => document.getElementById("eventModal").style.display = "none";
+  document.getElementById("saveEvt").onclick = saveEvent;
+  document.getElementById("deleteEvtBtn").onclick = deleteEvent;
+  document.getElementById("evtTitle").onkeydown = e => { if (e.key === "Enter") saveEvent(); };
+
+  document.getElementById("closeViewModal").onclick = () => document.getElementById("viewModal").style.display = "none";
+  document.getElementById("prevBtn").onclick = () => { curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; } renderCalendar(); };
+  document.getElementById("nextBtn").onclick = () => { curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; } renderCalendar(); };
+
+  [document.getElementById("pwModal"), document.getElementById("eventModal"), document.getElementById("viewModal")].forEach(modal => {
+    modal.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
+  });
+
+  // 初始化
+  const now = new Date();
+  curYear = now.getFullYear(); curMonth = now.getMonth();
+  loadEvents();
+  renderWeekdays();
+  renderCalendar();
+</script>
+</body>
+</html>
