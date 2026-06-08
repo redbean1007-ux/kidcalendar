@@ -386,14 +386,16 @@ async function appsScriptCall(payload) {
   }
   showLoading(payload.action === "delete" ? "刪除中..." : "儲存中...");
   try {
+    // 用 fetch + redirect:follow 搭配 no-cors 繞過 CORS 限制
+    const form = new FormData();
+    form.append("data", JSON.stringify(payload));
     await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    // no-cors 無法讀回傳，等一下重新 load
-    await new Promise(r => setTimeout(r, 1200));
+    // 等 Apps Script 執行完畢再重新載入
+    await new Promise(r => setTimeout(r, 2000));
     await loadEvents();
     return true;
   } catch(e) {
