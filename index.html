@@ -361,14 +361,23 @@ async function loadEvents() {
     const rows = json.table.rows || [];
     rows.forEach((row, ri) => {
       if (!row.c || !row.c[0] || !row.c[0].v) return;
-      const date  = String(row.c[0].v).trim();
+      const rawDate = String(row.c[0].v).trim();
+      // gviz 有時回傳 "Date(2026,5,13)" 格式，需要轉換
+      let date = rawDate;
+      const datMatch = rawDate.match(/Date\((\d+),(\d+),(\d+)\)/);
+      if (datMatch) {
+        const y = datMatch[1];
+        const m = String(Number(datMatch[2]) + 1).padStart(2, "0");
+        const d = String(datMatch[3]).padStart(2, "0");
+        date = `${y}-${m}-${d}`;
+      }
       const title = row.c[1] ? String(row.c[1].v || "").trim() : "";
       const note  = row.c[2] ? String(row.c[2].v || "").trim() : "";
       const color = row.c[3] ? String(row.c[3].v || COLORS[0]).trim() : COLORS[0];
       const id    = row.c[4] ? String(row.c[4].v || "").trim() : "";
       if (!date || !title) return;
       if (!events[date]) events[date] = [];
-      events[date].push({ title, note, color, id, rowIndex: ri + 2 }); // +2 因為第1列是標題
+      events[date].push({ title, note, color, id, rowIndex: ri + 2 });
     });
     setSyncStatus("ok", "已同步");
     renderCalendar();
